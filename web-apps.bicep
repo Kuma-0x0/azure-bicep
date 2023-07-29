@@ -15,14 +15,25 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
     reserved: false
   }
   sku:{
-    name:'F1'
+    name: 'F1'
+    // name: 'S1' スロットを設定するにはStandard以上が必要
   }
 }
 
+var appServiceName = '${resourceNamePrefix}-${env}-app'
 resource appService 'Microsoft.Web/sites@2022-09-01' = {
-  name: '${resourceNamePrefix}-${env}-app'
+  name: appServiceName
   location: location
   properties: {
     serverFarmId: appServicePlan.id
+    httpsOnly: true
+  }
+  resource appServiceSlot 'slots@2022-09-01' = {
+    name: '${appServiceName}-pre'
+    location: location
+    properties:{
+      serverFarmId: appServicePlan.id
+      httpsOnly: true
+    }
   }
 }
