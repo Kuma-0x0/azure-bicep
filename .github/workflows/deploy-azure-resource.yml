@@ -7,6 +7,8 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: ./../actions/azure-login.yml
+      - name: Checkout GitHub Actions
+        uses: actions/checkout@v3
+      - uses: ./../actions/azure-login
       - name: Show sign in result
         run: az account show
