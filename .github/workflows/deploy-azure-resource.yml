@@ -9,6 +9,7 @@ jobs:
     steps:
       - name: Checkout GitHub Actions
         uses: actions/checkout@v3
-      - uses: ./../.github/actions/azure-login
+      - name: Login to Azure
+        uses: ./../.github/actions/azure-login
       - name: Show sign in result
         run: az account show
