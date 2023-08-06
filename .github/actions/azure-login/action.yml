@@ -1,3 +1,5 @@
+on:
+  workflow_call:
 jobs:
   login:
     permissions:
