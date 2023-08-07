@@ -1,15 +1,13 @@
-on:
-  workflow_call:
-jobs:
-  login:
-    permissions:
-      id-token: write
-    steps:
-      - name: Checkout GitHub Actions
-        uses: actions/checkout@v3
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+name: Login to Azure
+
+runs:
+  using: composite
+  permissions:
+    id-token: write
+  steps:
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
