@@ -9,15 +9,21 @@ param location string = resourceGroup().location
 
 var resourceNameBase = '${resourceNameCommon}-${env}'
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
-  name: 'asp-${resourceNameBase}'
-  location: location
-  properties:{
-    reserved: false // windowsはfalse、Linuxはtrueに設定する
+module appServicePlan 'app-service-plan.bicep' = {
+  name: 'appServicePlanModule'
+  params: {
+    resourceNameCommon: resourceNameCommon
+    env: env
+    location: location
   }
-  sku:{
-    // name: 'F1'
-    name: 'S1' // スロットを設定するにはStandard以上が必要
+}
+
+module insights 'application-insights.bicep' = {
+  name: 'insightsModule'
+  params: {
+    resourceNameCommon: resourceNameCommon
+    env: env
+    location: location
   }
 }
 
@@ -26,17 +32,17 @@ resource appService 'Microsoft.Web/sites@2022-09-01' = {
   name: appServiceName
   location: location
   properties: {
-    serverFarmId: appServicePlan.id
+    serverFarmId: appServicePlan.outputs.id
     httpsOnly: true
     siteConfig: {
       appSettings: [
         {
           name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-          value: applicationInsights.properties.InstrumentationKey
+          value: insights.outputs.instrumentationKey
         }
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: applicationInsights.properties.ConnectionString
+          value: insights.outputs.connectionString
         }
       ]
     }
@@ -45,17 +51,17 @@ resource appService 'Microsoft.Web/sites@2022-09-01' = {
     name: '${appServiceName}-pre'
     location: location
     properties:{
-      serverFarmId: appServicePlan.id
+      serverFarmId: appServicePlan.outputs.id
       httpsOnly: true
       siteConfig: {
         appSettings: [
           {
             name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-            value: applicationInsights.properties.InstrumentationKey
+            value: insights.outputs.instrumentationKey
           }
           {
             name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-            value: applicationInsights.properties.ConnectionString
+            value: insights.outputs.connectionString
           }
         ]
       }
@@ -63,12 +69,6 @@ resource appService 'Microsoft.Web/sites@2022-09-01' = {
   }
 }
 
-resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: 'appi-${resourceNameBase}'
-  location: location
-  kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    Request_Source: 'rest'
-  }
-}
+output resourceId string = appService.id
+output slotId string = appService::appServiceSlot.id
+output location string = appService.location
