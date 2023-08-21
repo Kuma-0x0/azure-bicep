@@ -14,7 +14,7 @@ param sku string = 'Standard'
   'WestEurope'
   'EastAsia'
 ])
-param location string = 'CentralUS'
+param location string = 'EastUS2'
 
 var resourceNameBase = '${resourceNameCommon}-${env}'
 

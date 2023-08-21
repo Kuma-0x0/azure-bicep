@@ -31,44 +31,37 @@ var appServiceName = 'app-${resourceNameBase}'
 resource appService 'Microsoft.Web/sites@2022-09-01' = {
   name: appServiceName
   location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     serverFarmId: appServicePlan.outputs.id
     httpsOnly: true
-    siteConfig: {
-      appSettings: [
-        {
-          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-          value: insights.outputs.instrumentationKey
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: insights.outputs.connectionString
-        }
-      ]
-    }
   }
-  resource appServiceSlot 'slots@2022-09-01' = {
-    name: '${appServiceName}-pre'
-    location: location
-    properties:{
-      serverFarmId: appServicePlan.outputs.id
-      httpsOnly: true
-      siteConfig: {
-        appSettings: [
-          {
-            name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-            value: insights.outputs.instrumentationKey
-          }
-          {
-            name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-            value: insights.outputs.connectionString
-          }
-        ]
-      }
-    }
+}
+
+resource appServiceConfig 'Microsoft.Web/sites/config@2022-09-01' = {
+  parent: appService
+  name: 'appsettings'
+  properties: {
+      APPINSIGHTS_INSTRUMENTATIONKEY: insights.outputs.instrumentationKey
+      APPLICATIONINSIGHTS_CONNECTION_STRING: insights.outputs.connectionString
+  }
+}
+
+resource appServiceSlot 'Microsoft.Web/sites/slots@2022-09-01' = {
+  parent: appService
+  name: '${appServiceName}-pre'
+  location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties:{
+    serverFarmId: appServicePlan.outputs.id
+    httpsOnly: true
   }
 }
 
 output resourceId string = appService.id
-output slotId string = appService::appServiceSlot.id
+output slotId string = appServiceSlot.id
 output location string = appService.location
