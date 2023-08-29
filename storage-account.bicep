@@ -1,10 +1,8 @@
 param resourceNameCommon string
-@allowed([
-  'dev'
-  'stg'
-  'prod'
-])
+
+@allowed(['dev', 'stg', 'prod'])
 param env string
+
 param location string = resourceGroup().location
 
 var storageAccountName = 'st${resourceNameCommon}${env}'

@@ -1,12 +1,11 @@
 param resourceNameCommon string
-@allowed([
-  'dev'
-  'stg'
-  'prod'
-])
+
+@allowed(['dev', 'stg', 'prod'])
 param env string
+
 @allowed(['Free', 'Standard'])
 param sku string = 'Standard'
+
 @allowed([
   'WestUS2'
   'CentralUS'
@@ -25,15 +24,20 @@ resource swa 'Microsoft.Web/staticSites@2022-09-01' = {
     name: sku
     tier: sku
   }
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
+    repositoryUrl: 'https://github.com/Kuma-0x0/web-api'
+    branch: 'main'
+    provider: 'GitHub'
     stagingEnvironmentPolicy: 'Enabled'
     allowConfigFileUpdates: true
-    provider: 'None'
     enterpriseGradeCdnStatus: 'Disabled'
   }
 }
 
-// skuをStandardに設定するときのみ有効-----------------
+// skuをStandardに設定するとWebAppsを設定可能----------
 module app 'web-apps.bicep' = {
   name: 'appModule'
   params: {
