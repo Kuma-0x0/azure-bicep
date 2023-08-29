@@ -1,37 +1,36 @@
 param resourceNameCommon string
-@allowed([
-  'dev'
-  'stg'
-  'prod'
-])
+
+@allowed(['dev', 'stg', 'prod'])
 param env string
+
 param location string = resourceGroup().location
 
 var resourceNameBase = '${resourceNameCommon}-${env}'
 
-var storageAccountName = 'st${resourceNameCommon}${env}'
-resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-  name: storageAccountName
-  location: location
-  kind: 'StorageV2'
-  sku: {
-    name: 'Standard_LRS'
-  }
-  properties: {
-    supportsHttpsTrafficOnly: true
-    defaultToOAuthAuthentication: true
+module appServicePlan 'app-service-plan.bicep' = {
+  name: 'aspModule'
+  params: {
+    resourceNameCommon: resourceNameCommon
+    env: env
+    location: location
   }
 }
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
-  name: 'asp-${resourceNameBase}'
-  location: location
-  properties:{
-    reserved: false // windowsはfalse、Linuxはtrueに設定する
+module insights 'application-insights.bicep' = {
+  name: 'appiModule'
+  params: {
+    resourceNameCommon: resourceNameCommon
+    env: env
+    location: location
   }
-  sku:{
-    //name: 'F1'
-    name: 'S1' // スロットを設定するにはStandard以上が必要
+}
+
+module storageAccount 'storage-account.bicep' = {
+  name: 'stModule'
+  params: {
+    resourceNameCommon: resourceNameCommon
+    env: env
+    location: location
   }
 }
 
@@ -41,18 +40,18 @@ resource functions 'Microsoft.Web/sites@2022-09-01' = {
   kind: 'functionapp'
   location: location
   properties: {
-    serverFarmId: appServicePlan.id
+    serverFarmId: appServicePlan.outputs.id
     httpsOnly: true
     siteConfig: {
       alwaysOn: false
       appSettings: [
         {
           name: 'AzureWebJobsStorage'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
+          value: storageAccount.outputs.connectionString
         }
         {
           name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
+          value: storageAccount.outputs.connectionString
         }
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
@@ -64,11 +63,11 @@ resource functions 'Microsoft.Web/sites@2022-09-01' = {
         }
         {
           name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-          value: applicationInsights.properties.InstrumentationKey
+          value: insights.outputs.instrumentationKey
         }
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: applicationInsights.properties.ConnectionString
+          value: insights.outputs.connectionString
         }
       ]
     }
@@ -78,18 +77,18 @@ resource functions 'Microsoft.Web/sites@2022-09-01' = {
     kind: 'functionapp'
     location: location
     properties: {
-      serverFarmId: appServicePlan.id
+      serverFarmId: appServicePlan.outputs.id
       httpsOnly: true
       siteConfig: {
         alwaysOn: false
         appSettings: [
           {
             name: 'AzureWebJobsStorage'
-            value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
+            value: storageAccount.outputs.connectionString
           }
           {
             name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-            value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
+            value: storageAccount.outputs.connectionString
           }
           {
             name: 'FUNCTIONS_EXTENSION_VERSION'
@@ -101,24 +100,14 @@ resource functions 'Microsoft.Web/sites@2022-09-01' = {
           }
           {
             name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-            value: applicationInsights.properties.InstrumentationKey
+            value: insights.outputs.instrumentationKey
           }
           {
             name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-            value: applicationInsights.properties.ConnectionString
+            value: insights.outputs.connectionString
           }
         ]
       }
     }
-  }
-}
-
-resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: 'appi-${resourceNameBase}'
-  location: location
-  kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    Request_Source: 'rest'
   }
 }

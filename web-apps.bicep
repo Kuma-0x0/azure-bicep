@@ -1,23 +1,27 @@
 param resourceNameCommon string
-@allowed([
-  'dev'
-  'stg'
-  'prod'
-])
+
+@allowed(['dev', 'stg', 'prod'])
 param env string
+
 param location string = resourceGroup().location
 
 var resourceNameBase = '${resourceNameCommon}-${env}'
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
-  name: 'asp-${resourceNameBase}'
-  location: location
-  properties:{
-    reserved: false // windowsはfalse、Linuxはtrueに設定する
+module appServicePlan 'app-service-plan.bicep' = {
+  name: 'appServicePlanModule'
+  params: {
+    resourceNameCommon: resourceNameCommon
+    env: env
+    location: location
   }
-  sku:{
-    // name: 'F1'
-    name: 'S1' // スロットを設定するにはStandard以上が必要
+}
+
+module insights 'application-insights.bicep' = {
+  name: 'insightsModule'
+  params: {
+    resourceNameCommon: resourceNameCommon
+    env: env
+    location: location
   }
 }
 
@@ -25,50 +29,37 @@ var appServiceName = 'app-${resourceNameBase}'
 resource appService 'Microsoft.Web/sites@2022-09-01' = {
   name: appServiceName
   location: location
-  properties: {
-    serverFarmId: appServicePlan.id
-    httpsOnly: true
-    siteConfig: {
-      appSettings: [
-        {
-          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-          value: applicationInsights.properties.InstrumentationKey
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: applicationInsights.properties.ConnectionString
-        }
-      ]
-    }
+  identity: {
+    type: 'SystemAssigned'
   }
-  resource appServiceSlot 'slots@2022-09-01' = {
-    name: '${appServiceName}-pre'
-    location: location
-    properties:{
-      serverFarmId: appServicePlan.id
-      httpsOnly: true
-      siteConfig: {
-        appSettings: [
-          {
-            name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-            value: applicationInsights.properties.InstrumentationKey
-          }
-          {
-            name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-            value: applicationInsights.properties.ConnectionString
-          }
-        ]
-      }
-    }
+  properties: {
+    serverFarmId: appServicePlan.outputs.id
+    httpsOnly: true
   }
 }
 
-resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: 'appi-${resourceNameBase}'
-  location: location
-  kind: 'web'
+resource appServiceConfig 'Microsoft.Web/sites/config@2022-09-01' = {
+  parent: appService
+  name: 'appsettings'
   properties: {
-    Application_Type: 'web'
-    Request_Source: 'rest'
+      APPINSIGHTS_INSTRUMENTATIONKEY: insights.outputs.instrumentationKey
+      APPLICATIONINSIGHTS_CONNECTION_STRING: insights.outputs.connectionString
   }
 }
+
+resource appServiceSlot 'Microsoft.Web/sites/slots@2022-09-01' = {
+  parent: appService
+  name: '${appServiceName}-pre'
+  location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties:{
+    serverFarmId: appServicePlan.outputs.id
+    httpsOnly: true
+  }
+}
+
+output resourceId string = appService.id
+output slotId string = appServiceSlot.id
+output location string = appService.location
