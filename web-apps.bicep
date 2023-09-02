@@ -1,17 +1,11 @@
-param resourceNameCommon string
-
-@allowed(['dev', 'stg', 'prod'])
-param env string
+param resourceNameBase string
 
 param location string = resourceGroup().location
-
-var resourceNameBase = '${resourceNameCommon}-${env}'
 
 module appServicePlan 'app-service-plan.bicep' = {
   name: 'appServicePlanModule'
   params: {
-    resourceNameCommon: resourceNameCommon
-    env: env
+    resourceNameBase: resourceNameBase
     location: location
   }
 }
@@ -19,8 +13,7 @@ module appServicePlan 'app-service-plan.bicep' = {
 module insights 'application-insights.bicep' = {
   name: 'insightsModule'
   params: {
-    resourceNameCommon: resourceNameCommon
-    env: env
+    resourceNameBase: resourceNameBase
     location: location
   }
 }

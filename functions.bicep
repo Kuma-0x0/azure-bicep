@@ -1,17 +1,14 @@
-param resourceNameCommon string
+param resourceNameBase string
 
-@allowed(['dev', 'stg', 'prod'])
-param env string
+@description('小文字のみ使用可能')
+param storageAccountName string
 
 param location string = resourceGroup().location
-
-var resourceNameBase = '${resourceNameCommon}-${env}'
 
 module appServicePlan 'app-service-plan.bicep' = {
   name: 'aspModule'
   params: {
-    resourceNameCommon: resourceNameCommon
-    env: env
+    resourceNameBase: resourceNameBase
     location: location
   }
 }
@@ -19,8 +16,7 @@ module appServicePlan 'app-service-plan.bicep' = {
 module insights 'application-insights.bicep' = {
   name: 'appiModule'
   params: {
-    resourceNameCommon: resourceNameCommon
-    env: env
+    resourceNameBase: resourceNameBase
     location: location
   }
 }
@@ -28,8 +24,7 @@ module insights 'application-insights.bicep' = {
 module storageAccount 'storage-account.bicep' = {
   name: 'stModule'
   params: {
-    resourceNameCommon: resourceNameCommon
-    env: env
+    storageAccountName: storageAccountName
     location: location
   }
 }

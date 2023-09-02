@@ -1,11 +1,5 @@
-param resourceNameCommon string
-
-@allowed(['dev', 'stg', 'prod'])
-param env string
-
+param resourceNameBase string
 param location string = resourceGroup().location
-
-var resourceNameBase = '${resourceNameCommon}-${env}'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: 'asp-${resourceNameBase}'

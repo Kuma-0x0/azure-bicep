@@ -1,7 +1,4 @@
-param resourceNameCommon string
-
-@allowed(['dev', 'stg', 'prod'])
-param env string
+param resourceNameBase string
 
 @allowed(['Free', 'Standard'])
 param sku string = 'Standard'
@@ -14,8 +11,6 @@ param sku string = 'Standard'
   'EastAsia'
 ])
 param location string = 'EastUS2'
-
-var resourceNameBase = '${resourceNameCommon}-${env}'
 
 resource swa 'Microsoft.Web/staticSites@2022-09-01' = {
   name: 'swa-${resourceNameBase}'
@@ -41,8 +36,7 @@ resource swa 'Microsoft.Web/staticSites@2022-09-01' = {
 module app 'web-apps.bicep' = {
   name: 'appModule'
   params: {
-    resourceNameCommon: resourceNameCommon
-    env: env
+    resourceNameBase: resourceNameBase
   }
 }
 
