@@ -1,17 +1,11 @@
-param resourceNameCommon string
-
-@allowed(['dev', 'stg', 'prod'])
-param env string
+param resourceNameBase string
 
 param location string = resourceGroup().location
-
-var resourceNameBase = '${resourceNameCommon}-${env}'
 
 module appServicePlan 'app-service-plan.bicep' = {
   name: 'appServicePlanModule'
   params: {
-    resourceNameCommon: resourceNameCommon
-    env: env
+    resourceNameBase: resourceNameBase
     location: location
   }
 }
@@ -19,21 +13,32 @@ module appServicePlan 'app-service-plan.bicep' = {
 module insights 'application-insights.bicep' = {
   name: 'insightsModule'
   params: {
-    resourceNameCommon: resourceNameCommon
-    env: env
+    resourceNameBase: resourceNameBase
     location: location
   }
 }
 
-var appServiceName = 'app-${resourceNameBase}'
 resource appService 'Microsoft.Web/sites@2022-09-01' = {
-  name: appServiceName
+  name: 'app-${resourceNameBase}'
   location: location
   identity: {
     type: 'SystemAssigned'
   }
   properties: {
     serverFarmId: appServicePlan.outputs.id
+    httpsOnly: true
+  }
+}
+
+resource appServiceSlot 'Microsoft.Web/sites/slots@2022-09-01' = {
+  parent: appService
+  name: '${appService.name}-pre'
+  location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties:{
+    serverFarmId: appService.properties.serverFarmId
     httpsOnly: true
   }
 }
@@ -44,19 +49,6 @@ resource appServiceConfig 'Microsoft.Web/sites/config@2022-09-01' = {
   properties: {
       APPINSIGHTS_INSTRUMENTATIONKEY: insights.outputs.instrumentationKey
       APPLICATIONINSIGHTS_CONNECTION_STRING: insights.outputs.connectionString
-  }
-}
-
-resource appServiceSlot 'Microsoft.Web/sites/slots@2022-09-01' = {
-  parent: appService
-  name: '${appServiceName}-pre'
-  location: location
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties:{
-    serverFarmId: appServicePlan.outputs.id
-    httpsOnly: true
   }
 }
 

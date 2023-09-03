@@ -1,7 +1,4 @@
-param resourceNameCommon string
-
-@allowed(['dev', 'stg', 'prod'])
-param env string
+param resourceNameBase string
 
 param adminUserName string
 
@@ -12,17 +9,9 @@ param adminUserPassword string
 param sku string
 
 @description('照合順序')
-@allowed([
-  'Japanese_CI_AS'
-  'Japanese_CI_AS_KS'
-  'Japanese_CI_AS_KS_WS'
-  'Japanese_CI_AS_WS'
-])
-param collation string
+param collation string = 'Japanese_XJIS_100_CS_AS_KS_WS'
 
 param location string = resourceGroup().location
-
-var resourceNameBase = '${resourceNameCommon}-${env}'
 
 resource sqlServer 'Microsoft.Sql/servers@2022-11-01-preview' = {
   name: 'sql-${resourceNameBase}'
@@ -46,3 +35,6 @@ resource sqlDB 'Microsoft.Sql/servers/databases@2022-11-01-preview' = {
     requestedBackupStorageRedundancy: 'Local'
   }
 }
+
+#disable-next-line outputs-should-not-contain-secrets // Use only with resource configuration
+output connectionString string = 'Data Source=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${sqlDB.name};User Id=${adminUserName};Password=${adminUserPassword}'

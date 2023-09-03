@@ -11,9 +11,8 @@ $RESOUCE_GROUP=""
 $BICEP_PATH=""
 
 # Bicep parameters
-$RESOURCE_NAME_COMMON=""
-$ENV=""
+$RESOURCE_NAME_BASE=""
 
 az login --tenant $TENANT
 az account set --subscription $SUBSCRIPTION
-az deployment group create --name Example --resource-group $RESOUCE_GROUP --template-file $BICEP_PATH --parameters resourceNameCommon=$RESOURCE_NAME_COMMON env=$ENV
+az deployment group create --name Example --resource-group $RESOUCE_GROUP --template-file $BICEP_PATH --parameters resourceNameBase=$RESOURCE_NAME_BASE
