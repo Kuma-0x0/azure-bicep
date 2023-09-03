@@ -36,4 +36,5 @@ resource sqlDB 'Microsoft.Sql/servers/databases@2022-11-01-preview' = {
   }
 }
 
+#disable-next-line outputs-should-not-contain-secrets // Use only with resource configuration
 output connectionString string = 'Data Source=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${sqlDB.name};User Id=${adminUserName};Password=${adminUserPassword}'
