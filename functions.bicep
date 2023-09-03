@@ -1,8 +1,4 @@
 param resourceNameBase string
-
-@description('小文字のみ使用可能')
-param storageAccountName string
-
 param location string = resourceGroup().location
 
 module appServicePlan 'app-service-plan.bicep' = {
@@ -24,14 +20,13 @@ module insights 'application-insights.bicep' = {
 module storageAccount 'storage-account.bicep' = {
   name: 'stModule'
   params: {
-    storageAccountName: storageAccountName
+    resourceNameBase: resourceNameBase
     location: location
   }
 }
 
-var functionsName = 'func-${resourceNameBase}'
 resource functions 'Microsoft.Web/sites@2022-09-01' = {
-  name: functionsName
+  name: 'func-${resourceNameBase}'
   kind: 'functionapp'
   location: location
   properties: {
@@ -39,70 +34,55 @@ resource functions 'Microsoft.Web/sites@2022-09-01' = {
     httpsOnly: true
     siteConfig: {
       alwaysOn: false
-      appSettings: [
-        {
-          name: 'AzureWebJobsStorage'
-          value: storageAccount.outputs.connectionString
-        }
-        {
-          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: storageAccount.outputs.connectionString
-        }
-        {
-          name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'dotnet'
-        }
-        {
-          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-          value: insights.outputs.instrumentationKey
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: insights.outputs.connectionString
-        }
-      ]
-    }
-  }
-  resource functionsSlot 'slots@2022-09-01' = {
-    name: '${functionsName}-pre'
-    kind: 'functionapp'
-    location: location
-    properties: {
-      serverFarmId: appServicePlan.outputs.id
-      httpsOnly: true
-      siteConfig: {
-        alwaysOn: false
-        appSettings: [
-          {
-            name: 'AzureWebJobsStorage'
-            value: storageAccount.outputs.connectionString
-          }
-          {
-            name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-            value: storageAccount.outputs.connectionString
-          }
-          {
-            name: 'FUNCTIONS_EXTENSION_VERSION'
-            value: '~4'
-          }
-          {
-            name: 'FUNCTIONS_WORKER_RUNTIME'
-            value: 'dotnet'
-          }
-          {
-            name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-            value: insights.outputs.instrumentationKey
-          }
-          {
-            name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-            value: insights.outputs.connectionString
-          }
-        ]
-      }
     }
   }
 }
+
+resource functionsSlot 'Microsoft.Web/sites/slots@2022-09-01' = {
+  parent: functions
+  name: '${functions.name}-pre'
+  kind: 'functionapp'
+  location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: functions.properties.serverFarmId
+    httpsOnly: functions.properties.httpsOnly
+    siteConfig: {
+      alwaysOn: functions.properties.siteConfig.alwaysOn
+    }
+  }
+}
+
+resource functionsConfig 'Microsoft.Web/sites/config@2022-09-01' = {
+  parent: functions
+  name: 'appsettings'
+  properties: {
+    APPINSIGHTS_INSTRUMENTATIONKEY: insights.outputs.instrumentationKey
+    APPLICATIONINSIGHTS_CONNECTION_STRING: insights.outputs.connectionString
+    AzureWebJobsStorage: storageAccount.outputs.connectionString
+    FUNCTIONS_EXTENSION_VERSION: '~4'
+    FUNCTIONS_WORKER_RUNTIME: 'dotnet'
+    WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccount.outputs.connectionString
+    WEBSITE_CONTENTSHARE: '${functions.name}-${uniqueString(resourceGroup().id)}'
+  }
+}
+
+resource functionsSlotConfig 'Microsoft.Web/sites/slots/config@2022-09-01' = {
+  parent: functionsSlot
+  name: 'appsettings'
+  properties: {
+    APPINSIGHTS_INSTRUMENTATIONKEY: insights.outputs.instrumentationKey
+    APPLICATIONINSIGHTS_CONNECTION_STRING: insights.outputs.connectionString
+    AzureWebJobsStorage: storageAccount.outputs.connectionString
+    FUNCTIONS_EXTENSION_VERSION: '~4'
+    FUNCTIONS_WORKER_RUNTIME: 'dotnet'
+    WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: storageAccount.outputs.connectionString
+    WEBSITE_CONTENTSHARE: '${functionsSlot.name}-${uniqueString(resourceGroup().id)}'
+  }
+}
+
+output resourceId string = functions.id
+output slotId string = functionsSlot.id
+output location string = functions.location

@@ -1,8 +1,7 @@
-@description('小文字のみ使用可能')
-param storageAccountName string
+param resourceNameBase string
 param location string = resourceGroup().location
 
-var resourceName = 'st${storageAccountName}'
+var resourceName = 'st${toLower(replace(resourceNameBase, '-', ''))}'
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: resourceName
   location: location
