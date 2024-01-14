@@ -18,3 +18,9 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Show login result
         run: az account show
+      # - name: Update app service plan
+      #   run: |
+      #     az appservice plan update
+      #     --name ${{vars.APP_SERVICE_PLAN_NAME}}
+      #     --resource-group ${{vars.RESOURCE_GROUP_NAME}}
+      #     --sku s1

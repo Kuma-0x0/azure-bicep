@@ -1,0 +1,17 @@
+name: Update app service plan
+description: Update price levels for app service plan
+
+inputs:
+  app-service-plan-name:
+    description: app service plan name
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Update app service plan
+        run: |
+          az appservice plan update 
+          --name ${{ inputs.app-service-plan-name }}
+          --resource-group ${{vars.RESOURCE_GROUP_NAME}}
+          --sku s1

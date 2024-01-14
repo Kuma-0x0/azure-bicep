@@ -27,7 +27,7 @@ resource sqlDB 'Microsoft.Sql/servers/databases@2022-11-01-preview' = {
   name: 'sqldb-${resourceNameBase}'
   sku: {
     name: sku
-    tier: sku 
+    tier: sku
   }
   location: location
   properties: {
